@@ -17,6 +17,7 @@ library(plotly)
 library(RColorBrewer)
 library(dplyr)
 library(plyr)
+library(rockchalk)
 ui <- dashboardPage(skin='red',dashboardHeader(title='Netflix Data Visualisation',titleWidth = 300),
                     dashboardSidebar(sidebarMenu(menuItem("Movies",tabName = "movies",icon = icon("film")),
                                                  menuItem("Series",tabName = "tv_series", icon = icon("tv")),
@@ -92,6 +93,15 @@ server <- function(input,output){
     duration_int=as.numeric((duration_chr))
     movies$duration <- duration_int
     
+    
+    ##FOR SERIES###
+    #Concatenate factor labels
+    series$rating<-combineLevels(series$rating,levs = c("G","TV-G"),newLabel = "G")
+    series$rating<-combineLevels(series$rating,levs = c("PG","TV-PG"),newLabel = "PG")
+    series$rating<-combineLevels(series$rating,levs = c("","NR"),newLabel = "NR")
+    series$rating<-combineLevels(series$rating,levs = c("TV-MA","R"),newLabel = "R")
+
+    
     output$correlation_plot <- renderPlotly({gg <-ggplot(movies,aes(x=duration,y=release_year,text=paste("director: ",movies$director,"<br>title: ",movies$title),colour=factor(country),shape=factor(listed_in)))+
         geom_point(alpha=0.7,position = position_jitter())+
         scale_shape_manual(name="genres",values=seq(0,18))+
@@ -102,16 +112,18 @@ server <- function(input,output){
     output$boxplot <- renderPlot({
         theme_set(theme_minimal())
         ##release year above 2000
-        c2=rainbow(12,alpha=0.8)
+        #c2=rainbow(12,alpha=0.8)
         # Plot
-        g <- ggplot(series, aes(release_year,rating))
-        g + geom_boxplot( outlier.colour = NA,col=c2) +
+        g <- ggplot(series, aes(release_year,rating,fill=rating))
+        p<-g + geom_boxplot( outlier.colour = NA) +
             coord_cartesian(xlim = c(2000,2020))+
             labs(title="Series rating through the years", 
                  
                  caption="Source: Netflix Data",
                  x="Release year",
                  y="Rating")
+        p+scale_fill_discrete(name = "Appropriate for: ", labels = c("Children from 14 years old","All children","Children from 7 years old","Children from 7 years old-Contains Fantasy Violence","General audiences","Children with parental guidance","Not rating available","People from 17 years old"))
+        
     }) 
     
    
